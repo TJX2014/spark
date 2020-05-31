@@ -18,13 +18,13 @@
 package org.apache.spark.sql.catalyst.encoders
 
 import scala.reflect.runtime.universe.TypeTag
-
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.dsl.expressions._
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.catalyst.plans.PlanTest
 import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -160,6 +160,25 @@ class EncoderResolutionSuite extends PlanTest {
       fromRow(InternalRow(new GenericArrayData(Array(1, null))))
     }
     assert(e.getMessage.contains("Null value appeared in non-nullable field"))
+  }
+
+  test("SPARK-31854:Different results of query execution with wholestage codegen on and off ") {
+    withSQLConf(SQLConf.WHOLESTAGE_CODEGEN_ENABLED.key -> true.toString) {
+
+      //      val encoder = ExpressionEncoder[Seq[Int]]
+//      val attrs = 'a.array(IntegerType) :: Nil
+//
+//      // It should pass analysis
+//      val fromRow = encoder.resolveAndBind(attrs).createDeserializer()
+//
+//      fromRow(InternalRow(new GenericArrayData(Array(1, null))))
+    }
+
+    //    val e = intercept[RuntimeException] {
+//      fromRow(InternalRow(new GenericArrayData(Array(1, null))))
+//    }
+//
+//    assert(e.getMessage.contains("Null value appeared in non-nullable field"))
   }
 
   test("the real number of fields doesn't match encoder schema: tuple encoder") {

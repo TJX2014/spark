@@ -604,6 +604,20 @@ class ObjectExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper {
     checkExceptionInExpression[RuntimeException](
       serializer4, EmptyRow, "Cannot use null as map key!")
   }
+
+  test("SPARK-31854: Invoke in MapElementsExec should not propagate null") {
+    val targetObject = new InvokeTargetClass
+    val funcClass = classOf[InvokeTargetClass]
+    val funcObj = Literal.create(targetObject, ObjectType(funcClass))
+    val inputInt = Seq(BoundReference(0, ObjectType(classOf[Any]), true))
+    val outputType = ObjectType(classOf[(Any, Any)])
+    val inputRow = InternalRow.fromSeq(Seq(null.asInstanceOf[java.lang.Integer]))
+    val createExpr = (propagateNull: Boolean) => {
+      Invoke(funcObj, "mapFunc", outputType, inputInt, propagateNull)
+    }
+    checkObjectExprEvaluation(createExpr(true), null, inputRow)
+    checkObjectExprEvaluation(createExpr(false), (null, null), inputRow)
+  }
 }
 
 class TestBean extends Serializable {

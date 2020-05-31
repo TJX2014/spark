@@ -108,4 +108,7 @@ if [ $LAUNCHER_EXIT_CODE != 0 ]; then
 fi
 
 CMD=("${CMD[@]:0:$LAST}")
+if [ ${CMD[@]::1} != 'env' ]; then
+  CMD=(${CMD[@]::1} -agentlib:jdwp=transport=dt_socket,address=8000,server=y,suspend=n ${CMD[@]:1})
+fi
 exec "${CMD[@]}"
