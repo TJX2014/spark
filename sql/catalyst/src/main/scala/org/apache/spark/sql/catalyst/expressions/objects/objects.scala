@@ -78,7 +78,10 @@ trait InvokeLike extends Expression with NonSQLExpression {
       val argCodes = arguments.zipWithIndex.map { case (e, i) =>
         val expr = e.genCode(ctx)
         val updateResultIsNull = if (e.nullable) {
-          s"$resultIsNull = ${expr.isNull};"
+          s"""
+             System.out.println($resultIsNull);
+             System.out.println(${expr.isNull});
+             $resultIsNull = ${expr.isNull};""".stripMargin
         } else {
           ""
         }
@@ -373,7 +376,6 @@ case class Invoke(
         s"""
           if ($funcResult != null) {
             ${ev.value} = (${CodeGenerator.boxedType(javaType)}) $funcResult;
-            ${ev.isNull} = false;
           } else {
             ${ev.isNull} = true;
           }
@@ -1622,6 +1624,7 @@ case class AssertNotNull(child: Expression, walkedTypePath: Seq[String] = Nil)
     val errMsgField = ctx.addReferenceObj("errMsg", errMsg)
 
     val code = childGen.code + code"""
+      System.out.println("is null:"+${childGen.isNull});
       if (${childGen.isNull}) {
         throw new NullPointerException($errMsgField);
       }

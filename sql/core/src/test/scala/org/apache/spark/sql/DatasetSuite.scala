@@ -23,10 +23,10 @@ import java.sql.{Date, Timestamp}
 import org.scalatest.Assertions._
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.prop.TableDrivenPropertyChecks._
-
 import org.apache.spark.{SparkException, TaskContext}
 import org.apache.spark.sql.catalyst.ScroogeLikeExample
 import org.apache.spark.sql.catalyst.encoders.{OuterScopes, RowEncoder}
+import org.apache.spark.sql.catalyst.expressions.UnsafeRow
 import org.apache.spark.sql.catalyst.plans.{LeftAnti, LeftSemi}
 import org.apache.spark.sql.catalyst.util.sideBySide
 import org.apache.spark.sql.execution.{LogicalRDD, RDDScanExec, SQLExecution}
@@ -1918,10 +1918,13 @@ class DatasetSuite extends QueryTest
   }
 
   test("SPARK-31854: Invoke in MapElementsExec should not propagate null") {
-    spark.conf.set("spark.sql.codegen.wholeStage", false)
-    Seq("true", "false").foreach { wholeStage =>
+    Seq("true").foreach { wholeStage =>
       withSQLConf(SQLConf.WHOLESTAGE_CODEGEN_ENABLED.key -> wholeStage) {
-        val ds = Seq(1.asInstanceOf[Integer], null.asInstanceOf[Integer]).toDS()
+//        val data = new UnsafeRow(2)
+//        data.setInt(0, null)
+//        data.setInt(1, null)
+
+        val ds = Seq(3.asInstanceOf[Integer], null.asInstanceOf[Integer]).toDS()
         val expectedAnswer = Seq[(Integer, Integer)]((1, 1), (null, null))
         checkDataset(ds.map(v => (v, v)), expectedAnswer: _*)
       }

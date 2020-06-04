@@ -680,11 +680,13 @@ case class WholeStageCodegenExec(child: SparkPlan)(val codegenStageId: Int)
 
         public $className(Object[] references) {
           this.references = references;
+          System.out.println(references);
         }
 
         public void init(int index, scala.collection.Iterator[] inputs) {
           partitionIndex = index;
           this.inputs = inputs;
+          System.out.println(inputs);
           ${ctx.initMutableStates()}
           ${ctx.initPartition()}
         }

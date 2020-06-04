@@ -281,12 +281,12 @@ case class MapElementsExec(
       case _ => FunctionUtils.getFunctionOneName(outputObjectType, child.output(0).dataType)
     }
     val funcObj = Literal.create(func, ObjectType(funcClass))
-    val callFunc = Invoke(funcObj, funcName, outputObjectType, child.output, propagateNull = false)
+    val callFunc = Invoke(funcObj, funcName, outputObjectType, child.output, propagateNull = true)
 
     val result = BindReferences.bindReference(callFunc, child.output).genCode(ctx)
 
-    val callFunc2 = Invoke(funcObj, funcName, outputObjectType, child.output, propagateNull = true)
-    val result2 = BindReferences.bindReference(callFunc, child.output).genCode(ctx)
+//    val callFunc2 = Invoke(funcObj, funcName, outputObjectType, child.output, propagateNull = false)
+//    val result2 = BindReferences.bindReference(callFunc, child.output).genCode(ctx)
 
 
     consume(ctx, result :: Nil)
