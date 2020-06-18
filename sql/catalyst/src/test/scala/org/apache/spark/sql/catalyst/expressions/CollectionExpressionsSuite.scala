@@ -1836,4 +1836,22 @@ class CollectionExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper
     checkEvaluation(ArrayIntersect(empty, oneNull), Seq.empty)
     checkEvaluation(ArrayIntersect(oneNull, empty), Seq.empty)
   }
+
+  test("SPARK-31982: Spark sequence doesn't handle date increments that cross DST") {
+    checkEvaluation(Sequence(
+      Cast(Literal("2011-03-01"), TimestampType),
+      Cast(Literal("2011-04-01"), TimestampType),
+      Option(Literal(stringToInterval("interval 1 month"))),
+      Option("America/Chicago")),
+      Seq(
+        Timestamp.valueOf("2011-03-01 00:00:00"), Timestamp.valueOf("2011-04-01 00:00:00")))
+
+    checkEvaluation(Sequence(
+      Cast(Literal("2011-03-01"), DateType),
+      Cast(Literal("2011-04-01"), DateType),
+      Option(Literal(stringToInterval("interval 1 month"))),
+      Option("America/Chicago")),
+      Seq(
+        Date.valueOf("2011-03-01"), Date.valueOf("2011-04-01")))
+  }
 }
