@@ -22,12 +22,11 @@ import java.util.TimeZone
 
 import scala.language.implicitConversions
 import scala.util.Random
-
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
-import org.apache.spark.sql.catalyst.util.{DateTimeTestUtils, DateTimeUtils}
+import org.apache.spark.sql.catalyst.util.{DateFormatter, DateTimeTestUtils, DateTimeUtils}
 import org.apache.spark.sql.catalyst.util.DateTimeConstants.MICROS_PER_DAY
 import org.apache.spark.sql.catalyst.util.DateTimeTestUtils.UTC
 import org.apache.spark.sql.catalyst.util.IntervalUtils._
@@ -1835,5 +1834,45 @@ class CollectionExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper
     checkEvaluation(ArrayIntersect(oneNull, twoNulls), Seq(null))
     checkEvaluation(ArrayIntersect(empty, oneNull), Seq.empty)
     checkEvaluation(ArrayIntersect(oneNull, empty), Seq.empty)
+  }
+
+  test("SPARK-31982: Spark sequence doesn't handle date increments that cross DST") {
+    val z1 = DateTimeUtils.getZoneId("GMT")
+    val z2 = DateTimeUtils.getZoneId("America/Chicago")
+
+    val d1 = DateTimeUtils.stringToDate("2011-05-01", z1).get
+    val d2 = DateTimeUtils.stringToDate("2011-05-01", z2).get
+
+    val startMicros1 = d1 * MICROS_PER_DAY
+    val startMicros2 = d2 * MICROS_PER_DAY
+
+    //    val startMicros1 = DateTimeUtils.epochDaysToMicros(d1, z1)
+//    val startMicros2 = DateTimeUtils.epochDaysToMicros(d2, z2)
+    val end1 = DateTimeUtils.timestampAddInterval(
+      startMicros1, 1 , 0, 0, z1)
+    val end2 = DateTimeUtils.timestampAddInterval(
+      startMicros2, 1, 0, 0, z2)
+
+//    val da1 = end1 / MICROS_PER_DAY
+//    val da2 = end2 / MICROS_PER_DAY
+    val da1 = Math.round(end1 / MICROS_PER_DAY.toFloat)
+    val da2 = Math.round(end2 / MICROS_PER_DAY.toFloat)
+
+    val f1 = DateFormatter(z1)
+    val f2 = DateFormatter(z2)
+
+    val s1 = f1.format(da1.toInt)
+    val s2 = f2.format(da2.toInt)
+
+    assert(s1 == s2)
+    //    Array("America/Chicago", "GMT").foreach(tz => {
+//      checkEvaluation(Sequence(
+//        Cast(Literal("2011-03-01"), DateType),
+//        Cast(Literal("2011-04-01"), DateType),
+//        Option(Literal(stringToInterval("interval 1 month"))),
+//        Option(tz)),
+//        Seq(
+//          Date.valueOf("2011-03-01"), Date.valueOf("2011-04-01")))
+//    })
   }
 }
