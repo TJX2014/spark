@@ -2625,11 +2625,13 @@ object Sequence {
           stepMicros + stepMonths * microsPerMonth + stepDays * microsPerDay
 
         // Date to timestamp is not equal from GMT and Chicago timezones
-        val (startMicros, stopMicros) = if(scale == 1)
-          (num.toLong(start), num.toLong(stop))
-        else
-          (DateTimeUtils.epochDaysToMicros(num.toInt(start), zoneId),
-            DateTimeUtils.epochDaysToMicros(num.toInt(stop), zoneId))
+        val (startMicros, stopMicros) = if (scale == 1) {
+          (num.toLong(start) * scale, num.toLong(stop) * scale)
+        }
+        else {
+          (DateTimeUtils epochDaysToMicros(num.toInt(start), zoneId),
+            DateTimeUtils epochDaysToMicros(num.toInt(stop), zoneId))
+        }
         val maxEstimatedArrayLength =
           getSequenceLength(startMicros, stopMicros, intervalStepInMicros)
 
@@ -2696,8 +2698,12 @@ object Sequence {
          |    $startMicros = $start;
          |    $stopMicros = $stop;
          |  } else {
-         |    $startMicros = org.apache.spark.sql.catalyst.util.DateTimeUtils.epochDaysToMicros($start, $zid);
-         |    $stopMicros = org.apache.spark.sql.catalyst.util.DateTimeUtils.epochDaysToMicros($stop, $zid);
+         |    $startMicros =
+         |      org.apache.spark.sql.catalyst.util.DateTimeUtils.epochDaysToMicros(
+         |        (int)$start, $zid);
+         |    $stopMicros =
+         |      org.apache.spark.sql.catalyst.util.DateTimeUtils.epochDaysToMicros(
+         |        (int)$stop, $zid);
          |  }
          |
          |  $sequenceLengthCode

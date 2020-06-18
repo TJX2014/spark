@@ -258,13 +258,14 @@ class CollectionExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper
   }
 
   test("MapFromEntries") {
-    def arrayType(keyType: DataType, valueType: DataType) : DataType = {
+    def arrayType(keyType: DataType, valueType: DataType): DataType = {
       ArrayType(
         StructType(Seq(
           StructField("a", keyType),
           StructField("b", valueType))),
         true)
     }
+
     def row(values: Any*): InternalRow = create_row(values: _*)
 
     // Primitive-type keys and values
@@ -550,9 +551,9 @@ class CollectionExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper
 
   test("ArrayJoin") {
     def testArrays(
-        arrays: Seq[Expression],
-        nullReplacement: Option[Expression],
-        expected: Seq[String]): Unit = {
+                    arrays: Seq[Expression],
+                    nullReplacement: Option[Expression],
+                    expected: Seq[String]): Unit = {
       assert(arrays.length == expected.length)
       arrays.zip(expected).foreach { case (arr, exp) =>
         checkEvaluation(ArrayJoin(arr, Literal(","), nullReplacement), exp)
@@ -650,7 +651,9 @@ class CollectionExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper
 
     checkEvaluation(ArraysZip(Seq(literals(0), longLiteral)),
       List(Row(9001, 0), Row(9002, 1), Row(9003, 2)) ++
-      (3 to 1000).map { Row(null, _) }.toList)
+        (3 to 1000).map {
+          Row(null, _)
+        }.toList)
 
     val manyLiterals = (0 to 1000).map { _ =>
       Literal.create(Seq(1), ArrayType(IntegerType))
@@ -1059,7 +1062,9 @@ class CollectionExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper
     intercept[Exception] {
       checkEvaluation(ElementAt(a0, Literal(0)), null)
     }.getMessage.contains("SQL array indices start at 1")
-    intercept[Exception] { checkEvaluation(ElementAt(a0, Literal(1.1)), null) }
+    intercept[Exception] {
+      checkEvaluation(ElementAt(a0, Literal(1.1)), null)
+    }
     checkEvaluation(ElementAt(a0, Literal(4)), null)
     checkEvaluation(ElementAt(a0, Literal(-4)), null)
 
@@ -1838,20 +1843,14 @@ class CollectionExpressionsSuite extends SparkFunSuite with ExpressionEvalHelper
   }
 
   test("SPARK-31982: Spark sequence doesn't handle date increments that cross DST") {
-    checkEvaluation(Sequence(
-      Cast(Literal("2011-03-01"), TimestampType),
-      Cast(Literal("2011-04-01"), TimestampType),
-      Option(Literal(stringToInterval("interval 1 month"))),
-      Option("America/Chicago")),
-      Seq(
-        Timestamp.valueOf("2011-03-01 00:00:00"), Timestamp.valueOf("2011-04-01 00:00:00")))
-
-    checkEvaluation(Sequence(
-      Cast(Literal("2011-03-01"), DateType),
-      Cast(Literal("2011-04-01"), DateType),
-      Option(Literal(stringToInterval("interval 1 month"))),
-      Option("America/Chicago")),
-      Seq(
-        Date.valueOf("2011-03-01"), Date.valueOf("2011-04-01")))
+    Array("America/Chicago", "GMT").foreach(tz => {
+      checkEvaluation(Sequence(
+        Cast(Literal("2011-03-01"), DateType),
+        Cast(Literal("2011-04-01"), DateType),
+        Option(Literal(stringToInterval("interval 1 month"))),
+        Option(tz)),
+        Seq(
+          Date.valueOf("2011-03-01"), Date.valueOf("2011-04-01")))
+    })
   }
 }
