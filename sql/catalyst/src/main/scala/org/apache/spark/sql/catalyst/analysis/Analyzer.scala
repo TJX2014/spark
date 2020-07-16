@@ -1168,6 +1168,14 @@ class Analyzer(
       logDebug(s"Conflicting attributes ${conflictingAttributes.mkString(",")} " +
         s"between $left and $right")
 
+
+      def getAttrRewrite(conflictPlans: Seq[(LogicalPlan, LogicalPlan)])
+        : AttributeMap[Attribute] = {
+        AttributeMap(conflictPlans.flatMap {
+          case (oldRelation, newRelation) =>
+            oldRelation.output.zip(newRelation.output)})
+      }
+
       /**
        * For LogicalPlan likes MultiInstanceRelation, Project, Aggregate, etc, whose output doesn't
        * inherit directly from its children, we could just stop collect on it. Because we could
@@ -1223,6 +1231,31 @@ class Analyzer(
             .nonEmpty =>
           Seq((oldVersion, oldVersion.copy(windowExpressions = newAliases(windowExpressions))))
 
+        case oldVersion @ Join(leftExp, rightExp, _, _, _) =>
+          val leftRes = leftExp.children.flatMap(collectConflictPlans)
+          val rightRes = rightExp.children.flatMap(collectConflictPlans)
+          if (leftRes.size > 0 && rightRes.size > 0) {
+            val leftRewrite = getAttrRewrite(leftRes)
+            val rightRewrite = getAttrRewrite(rightRes)
+            def hasAttr(attrs: Seq[Attribute], target: Attribute): Boolean = {
+              for (attr <- attrs) {
+                if (attr.exprId == target.exprId) {
+                  return true
+                }
+              }
+              false
+            }
+            for ((oldAttr, _) <- leftRewrite) {
+              if (rightRewrite.keySet.contains(oldAttr)) {
+                if (hasAttr(leftExp.output, oldAttr) && !hasAttr(rightExp.output, oldAttr)) {
+                  return leftRes
+                } else if (!hasAttr(leftExp.output, oldAttr) && hasAttr(rightExp.output, oldAttr)) {
+                  return rightRes
+                }
+              }
+            }
+          }
+          leftRes ++ rightRes
         case _ => plan.children.flatMap(collectConflictPlans)
       }
 
@@ -1237,8 +1270,7 @@ class Analyzer(
       if (conflictPlans.isEmpty) {
         right
       } else {
-        val attributeRewrites = AttributeMap(conflictPlans.flatMap {
-          case (oldRelation, newRelation) => oldRelation.output.zip(newRelation.output)})
+        val attributeRewrites = getAttrRewrite(conflictPlans)
         val conflictPlanMap = conflictPlans.toMap
         // transformDown so that we can replace all the old Relations in one turn due to
         // the reason that `conflictPlans` are also collected in pre-order.

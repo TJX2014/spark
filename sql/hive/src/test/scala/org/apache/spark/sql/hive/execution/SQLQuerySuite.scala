@@ -2558,6 +2558,15 @@ abstract class SQLQuerySuiteBase extends QueryTest with SQLTestUtils with TestHi
       }
     }
   }
+
+  test("SPARK-32280: multiply same view join deal with loss project") {
+    withTempView("a", "b") {
+      sql("select 1 as id").createOrReplaceTempView("a")
+      sql("select id,'foo' as kind from a").createOrReplaceTempView("b")
+      sql("select 0 from b join (select * from b join " +
+        "(select l.id from b as l join b as r on l.kind = r.kind) c using (id)) using (id)")
+    }
+  }
 }
 
 @SlowHiveTest
