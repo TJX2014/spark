@@ -56,4 +56,14 @@ class ParquetFileFormatSuite extends QueryTest with ParquetTest with SharedSpark
     }.getCause
     assert(exception.getMessage().contains("Could not read footer for file"))
   }
+
+  test("SPARK-32317: parquet diff decimal read inconsistent") {
+    withTempDir(f => {
+      spark.sql("select * from values cast(19500.00 as decimal(15,6)) as (d)")
+        .write.mode("append").parquet(f.getAbsolutePath)
+      spark.sql("select * from values cast(19500.00 as decimal(15,2)) as (d)")
+        .write.mode("append").parquet(f.getAbsolutePath)
+      spark.read.parquet(f.getAbsolutePath).show()
+    })
+  }
 }

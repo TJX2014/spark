@@ -16,11 +16,12 @@
  */
 package org.apache.spark.sql.execution.datasources.parquet
 
-import scala.collection.JavaConverters._
+import java.io.File
 
 import org.apache.parquet.hadoop.ParquetOutputFormat
-
 import org.apache.spark.sql.test.SharedSparkSession
+
+import scala.collection.JavaConverters._
 
 // TODO: this needs a lot more testing but it's currently not easy to test with the parquet
 // writer abstractions. Revisit.
@@ -112,6 +113,21 @@ class ParquetEncodingSuite extends ParquetCompatibilityTest with SharedSparkSess
         }
         reader.close()
       }
+    }
+  }
+
+  test("SPARK-32317: decimal inconsistent check") {
+    for (file <- SpecificParquetRecordReaderBase.listDirectory(
+      new File("/tmp/output11")).toArray) {
+      val conf = sqlContext.conf
+      val reader = new VectorizedParquetRecordReader(
+        conf.offHeapColumnVectorEnabled, conf.parquetVectorizedReaderBatchSize)
+      reader.initialize(file.asInstanceOf[String], null)
+      val batch = reader.resultBatch()
+      assert(reader.nextBatch())
+      val column = batch.column(0)
+      val res = column.getDecimal(0, 16, 2)
+      assert(res != null)
     }
   }
 }
